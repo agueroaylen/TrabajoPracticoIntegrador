@@ -1,0 +1,14 @@
+[
+    {
+        "Id": "d9b1d7db-5fdc-4e62-9c64-a409f3d58144",
+        "Name": "Mirian Gordillo",
+        "EMail": "mirian@gmail.com",
+        "PhoneNumber": "3865586560"
+    },
+    {
+        "Id": "c2a68f25-d7b5-4ea7-8c95-7861fa7b5b3e",
+        "Name": "Paulina Quintero",
+        "EMail": "pau@gmail.com",
+        "PhoneNumber" : "3865685550"
+    }
+]
