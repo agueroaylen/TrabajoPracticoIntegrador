@@ -7,9 +7,6 @@
 | Legajo | Nombre Completo            | Correo Electrónico                       |
 | ------ | -------------------------- | ---------------------------------------- |
 | 58156  | Agüero, Aylen              | Aylen.Aguero@alu.frt.utn.edu.ar          |
-| 58536  | Fernandez, Jose Agustin    | Jose.Fernandez@alu.frt.utn.edu.ar        |
-| 58584  | Quintero, Paulina Rocio    | Paulina.Quintero@alu.frt.utn.edu.ar      |
-	   	          
 	              
 	     	    
 	     
@@ -26,7 +23,7 @@
 ### 📦 Clonar el Repositorio
 
 ```bash
-git clone https://github.com/PauRQuintero/Dsw2025TPI
+git https://github.com/agueroaylen/TrabajoPracticoIntegrador
 cd Dsw2025TPI
 ```
 

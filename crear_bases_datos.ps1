@@ -1,7 +1,7 @@
 # Script para crear las bases de datos MySQL
 # Usa la contraseña del appsettings.json
 
-$password = "ramiroparadi11"
+$password = "LuAy_2222"
 $mysqlPath = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
 
 if (Test-Path $mysqlPath) {
