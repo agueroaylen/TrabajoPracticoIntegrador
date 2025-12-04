@@ -6,7 +6,7 @@ import AdminHeader from '../components/AdminHeader'
 import Modal from '../components/Modal'
 import AlertModal from '../components/AlertModal'
 import ConfirmModal from '../components/ConfirmModal'
-import { Search, ChevronLeft, ChevronRight, Eye, Trash2, Ban, CheckCircle } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Eye, Trash2, Ban, CheckCircle, Edit, Package, Hash, Tag, FileText, DollarSign, Box } from 'lucide-react'
 import { alertSuccess, alertError, alertWarning, alertInfo, showConfirm } from '../utils/modalUtils'
 
 function Products() {
@@ -18,6 +18,7 @@ function Products() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingProductId, setEditingProductId] = useState(null)
   const [formData, setFormData] = useState({
     sku: '',
     internalCode: '',
@@ -333,6 +334,7 @@ function Products() {
 
   const handleCancelCreate = () => {
     setShowCreateForm(false)
+    setEditingProductId(null)
     setFormData({
       sku: '',
       internalCode: '',
@@ -341,6 +343,39 @@ function Products() {
       currentUnitPrice: '',
       stockQuantity: ''
     })
+  }
+
+  const handleEditProduct = async (productId) => {
+    try {
+      const token = localStorage.getItem('token')
+      const headers = {
+        Authorization: `Bearer ${token}`
+      }
+      // Usar endpoint de admin que permite ver productos inactivos
+      const response = await axios.get(`/api/products/admin/${productId}`, { headers })
+      const product = response.data
+      
+      // Cargar los datos del producto en el formulario
+      setFormData({
+        sku: product.Sku || product.sku || '',
+        internalCode: product.InternalCode || product.internalCode || '',
+        name: product.Name || product.name || '',
+        description: product.Description || product.description || '',
+        currentUnitPrice: (product.CurrentUnitPrice !== undefined ? product.CurrentUnitPrice : product.currentUnitPrice) || '',
+        stockQuantity: (product.StockQuantity !== undefined ? product.StockQuantity : product.stockQuantity) || ''
+      })
+      
+      setEditingProductId(productId)
+      setShowCreateForm(true)
+    } catch (error) {
+      console.error('Error al cargar el producto para editar:', error)
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token')
+        navigate('/login')
+      } else {
+        await alertError('Error al cargar el producto para editar. Por favor, intenta nuevamente.', 'Error')
+      }
+    }
   }
 
   const handleFormChange = (e) => {
@@ -371,13 +406,22 @@ function Products() {
         StockQuantity: parseInt(formData.stockQuantity)
       }
 
-      await axios.post('/api/products', productData, { headers })
+      if (editingProductId) {
+        // Modo edición: actualizar producto existente
+        await axios.put(`/api/products/${editingProductId}`, productData, { headers })
+        await alertSuccess('Producto actualizado exitosamente', 'Éxito')
+      } else {
+        // Modo creación: crear nuevo producto
+        await axios.post('/api/products', productData, { headers })
+        await alertSuccess('Producto creado exitosamente', 'Éxito')
+      }
       
       // Recargar productos
       await fetchProducts()
       
       // Limpiar formulario y ocultar
       setShowCreateForm(false)
+      setEditingProductId(null)
       setFormData({
         sku: '',
         internalCode: '',
@@ -386,14 +430,12 @@ function Products() {
         currentUnitPrice: '',
         stockQuantity: ''
       })
-      
-      await alertSuccess('Producto creado exitosamente', 'Éxito')
     } catch (error) {
-      console.error('Error al crear producto:', error)
+      console.error(`Error al ${editingProductId ? 'actualizar' : 'crear'} producto:`, error)
       if (error.response?.data?.error) {
         await alertError(`Error: ${error.response.data.error}`, 'Error')
       } else {
-        await alertError('Error al crear el producto. Por favor, intenta nuevamente.', 'Error')
+        await alertError(`Error al ${editingProductId ? 'actualizar' : 'crear'} el producto. Por favor, intenta nuevamente.`, 'Error')
       }
     } finally {
       setIsSubmitting(false)
@@ -554,118 +596,197 @@ function Products() {
           
           <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
             {showCreateForm ? (
-              /* Formulario de creación de producto */
-              <form onSubmit={handleSubmitProduct} className="space-y-4 sm:space-y-6">
-                <div>
-                  <label htmlFor="sku" className="block text-gray-700 text-sm sm:text-base font-medium mb-2">
-                    SKU
-                  </label>
-                  <input
-                    type="text"
-                    id="sku"
-                    name="sku"
-                    value={formData.sku}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-base"
-                  />
-                </div>
+              /* Formulario de creación/edición de producto */
+              <div className="mb-6 sm:mb-8">
+                <div className="bg-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl border-2 border-gray-700 p-6 sm:p-8 md:p-10 lg:p-12">
+                  {/* Header del formulario */}
+                  <div className="mb-8 sm:mb-10">
+                    <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                      <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl ${editingProductId ? 'bg-gradient-to-br from-purple-500 to-purple-600' : 'bg-gradient-to-br from-orange-500 to-orange-600'} shadow-lg`}>
+                        <Package className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
+                          {editingProductId ? 'Editar Producto' : 'Crear Producto'}
+                        </h2>
+                        <p className="text-gray-300 text-sm sm:text-base mt-1">
+                          {editingProductId ? 'Modifica la información del producto' : 'Completa los datos para crear un nuevo producto'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                <div>
-                  <label htmlFor="internalCode" className="block text-gray-700 text-sm sm:text-base font-medium mb-2">
-                    Código único
-                  </label>
-                  <input
-                    type="text"
-                    id="internalCode"
-                    name="internalCode"
-                    value={formData.internalCode}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-base"
-                  />
-                </div>
+                  <form onSubmit={handleSubmitProduct} className="space-y-5 sm:space-y-6 md:space-y-7">
+                    {/* Grid de campos */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 md:gap-7">
+                      {/* SKU */}
+                      <div className="md:col-span-1">
+                        <label htmlFor="sku" className="flex items-center gap-2 text-white text-sm sm:text-base font-semibold mb-2 sm:mb-3">
+                          <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                          SKU
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            id="sku"
+                            name="sku"
+                            value={formData.sku}
+                            onChange={handleFormChange}
+                            required
+                            placeholder="Ej: PROD-001"
+                            className="w-full pl-4 sm:pl-5 pr-4 py-3 sm:py-4 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-base placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
 
-                <div>
-                  <label htmlFor="name" className="block text-gray-700 text-sm sm:text-base font-medium mb-2">
-                    Nombre
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-base"
-                  />
-                </div>
+                      {/* Código único */}
+                      <div className="md:col-span-1">
+                        <label htmlFor="internalCode" className="flex items-center gap-2 text-white text-sm sm:text-base font-semibold mb-2 sm:mb-3">
+                          <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                          Código único
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            id="internalCode"
+                            name="internalCode"
+                            value={formData.internalCode}
+                            onChange={handleFormChange}
+                            required
+                            placeholder="Ej: INT-001"
+                            className="w-full pl-4 sm:pl-5 pr-4 py-3 sm:py-4 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-base placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
 
-                <div>
-                  <label htmlFor="description" className="block text-gray-700 text-sm sm:text-base font-medium mb-2">
-                    Descripción
-                  </label>
-                  <input
-                    type="text"
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-base"
-                  />
-                </div>
+                      {/* Nombre */}
+                      <div className="md:col-span-2">
+                        <label htmlFor="name" className="flex items-center gap-2 text-white text-sm sm:text-base font-semibold mb-2 sm:mb-3">
+                          <Package className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                          Nombre del producto
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleFormChange}
+                            required
+                            placeholder="Ingresa el nombre del producto"
+                            className="w-full pl-4 sm:pl-5 pr-4 py-3 sm:py-4 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-base placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
 
-                <div>
-                  <label htmlFor="currentUnitPrice" className="block text-gray-700 text-sm sm:text-base font-medium mb-2">
-                    Precio
-                  </label>
-                  <input
-                    type="number"
-                    id="currentUnitPrice"
-                    name="currentUnitPrice"
-                    value={formData.currentUnitPrice}
-                    onChange={handleFormChange}
-                    step="0.01"
-                    min="0"
-                    required
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-base"
-                  />
-                </div>
+                      {/* Descripción */}
+                      <div className="md:col-span-2">
+                        <label htmlFor="description" className="flex items-center gap-2 text-white text-sm sm:text-base font-semibold mb-2 sm:mb-3">
+                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                          Descripción
+                        </label>
+                        <div className="relative">
+                          <textarea
+                            id="description"
+                            name="description"
+                            value={formData.description}
+                            onChange={handleFormChange}
+                            required
+                            rows="4"
+                            placeholder="Describe las características del producto..."
+                            className="w-full pl-4 sm:pl-5 pr-4 py-3 sm:py-4 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-base placeholder-gray-400 resize-none"
+                          />
+                        </div>
+                      </div>
 
-                <div>
-                  <label htmlFor="stockQuantity" className="block text-gray-700 text-sm sm:text-base font-medium mb-2">
-                    Stock
-                  </label>
-                  <input
-                    type="number"
-                    id="stockQuantity"
-                    name="stockQuantity"
-                    value={formData.stockQuantity}
-                    onChange={handleFormChange}
-                    min="0"
-                    required
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 text-base"
-                  />
-                </div>
+                      {/* Precio */}
+                      <div className="md:col-span-1">
+                        <label htmlFor="currentUnitPrice" className="flex items-center gap-2 text-white text-sm sm:text-base font-semibold mb-2 sm:mb-3">
+                          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                          Precio unitario
+                        </label>
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300 font-semibold">$</div>
+                          <input
+                            type="number"
+                            id="currentUnitPrice"
+                            name="currentUnitPrice"
+                            value={formData.currentUnitPrice}
+                            onChange={handleFormChange}
+                            step="0.01"
+                            min="0"
+                            required
+                            placeholder="0.00"
+                            className="w-full pl-8 sm:pl-10 pr-4 py-3 sm:py-4 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-base placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
 
-                <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleCancelCreate}
-                    className="w-full sm:w-auto px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm hover:shadow-md text-base"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-base"
-                  >
-                    {isSubmitting ? 'Creando...' : 'Crear Producto'}
-                  </button>
+                      {/* Stock */}
+                      <div className="md:col-span-1">
+                        <label htmlFor="stockQuantity" className="flex items-center gap-2 text-white text-sm sm:text-base font-semibold mb-2 sm:mb-3">
+                          <Box className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                          Cantidad en stock
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            id="stockQuantity"
+                            name="stockQuantity"
+                            value={formData.stockQuantity}
+                            onChange={handleFormChange}
+                            min="0"
+                            required
+                            placeholder="0"
+                            className="w-full pl-4 sm:pl-5 pr-4 py-3 sm:py-4 border-2 border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-gray-700 text-white shadow-sm hover:shadow-md transition-all duration-200 text-base placeholder-gray-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-6 sm:pt-8 border-t-2 border-gray-700">
+                      <button
+                        type="button"
+                        onClick={handleCancelCreate}
+                        className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gray-700 border-2 border-gray-600 text-white rounded-xl hover:border-gray-500 hover:bg-gray-600 transition-all duration-200 font-semibold shadow-sm hover:shadow-md text-base sm:text-lg flex items-center justify-center gap-2"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-base sm:text-lg flex items-center justify-center gap-2 ${
+                          editingProductId 
+                            ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white' 
+                            : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                        }`}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            {editingProductId ? 'Actualizando...' : 'Creando...'}
+                          </>
+                        ) : (
+                          <>
+                            {editingProductId ? (
+                              <>
+                                <Edit className="w-5 h-5" />
+                                Actualizar Producto
+                              </>
+                            ) : (
+                              <>
+                                <Package className="w-5 h-5" />
+                                Crear Producto
+                              </>
+                            )}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              </div>
             ) : (
               <>
                 {/* Header con título y botón crear */}
@@ -753,6 +874,14 @@ function Products() {
                         >
                           <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
                           Ver
+                        </button>
+                        <button
+                          onClick={() => handleEditProduct(product.id || product.Id)}
+                          className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl transition-all duration-200 text-sm sm:text-base md:text-lg font-semibold shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                          title="Editar producto"
+                        >
+                          <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                          Editar
                         </button>
                         {(product.isActive !== undefined ? product.isActive : product.IsActive) ? (
                           <button
