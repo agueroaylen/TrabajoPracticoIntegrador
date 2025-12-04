@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import Sidebar from '../components/Sidebar'
-import AdminHeader from '../components/AdminHeader'
-import Modal from '../components/Modal'
+import Sidebar from '../../shared/layout/Sidebar'
+import AdminHeader from '../../shared/layout/AdminHeader'
+import Modal from '../../shared/components/Modal'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
-import { alertSuccess, alertError, alertWarning, alertInfo } from '../utils/modalUtils'
+import { alertSuccess, alertError, alertWarning, alertInfo } from '../../shared/utils/modalUtils'
 
 function Orders() {
   const navigate = useNavigate()

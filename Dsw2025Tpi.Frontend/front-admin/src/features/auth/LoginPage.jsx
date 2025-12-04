@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import logocompleto from '../public/bite+logocompleto.jpg'
+import logocompleto from '../../assets/bite+logocompleto.jpg'
+import { alertError } from '../../shared/utils/modalUtils'
 
 // Credenciales del UserSeeder:
 // Admin: usuario="admin", password="Admin123*"
 // Cliente: usuario="customer", password="Customer123*"
 
-function Login() {
+function LoginPage() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     username: '',
@@ -230,5 +231,5 @@ function Login() {
   )
 }
 
-export default Login
+export default LoginPage
 

@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LogOut, Store } from 'lucide-react'
-import logo from '../public/logosinfondo.png'
+import logo from '../../assets/logosinfondo.png'
 
 function AdminHeader() {
   const navigate = useNavigate()
@@ -87,3 +87,4 @@ function AdminHeader() {
 }
 
 export default AdminHeader
+

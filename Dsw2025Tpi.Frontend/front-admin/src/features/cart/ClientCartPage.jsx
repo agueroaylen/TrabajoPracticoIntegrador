@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
-import ClientHeader from '../components/ClientHeader'
-import LoginModal from '../components/LoginModal'
-import SignupModal from '../components/SignupModal'
-import Modal from '../components/Modal'
-import SuccessPurchaseModal from '../components/SuccessPurchaseModal'
+import ClientHeader from '../../shared/layout/ClientHeader'
+import LoginModal from '../../features/auth/LoginModal'
+import SignupModal from '../../features/auth/SignupModal'
+import Modal from '../../shared/components/Modal'
+import SuccessPurchaseModal from '../../features/cart/SuccessPurchaseModal'
 import { Plus, Minus } from 'lucide-react'
+import { alertError, alertWarning } from '../../shared/utils/modalUtils'
 
 function ClientCart() {
   const location = useLocation()

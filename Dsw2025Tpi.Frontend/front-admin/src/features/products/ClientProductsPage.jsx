@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
-import ClientHeader from '../components/ClientHeader'
-import ProductCard from '../components/ProductCard'
+import ClientHeader from '../../shared/layout/ClientHeader'
+import ProductCard from './ProductCard'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 function ClientProducts() {

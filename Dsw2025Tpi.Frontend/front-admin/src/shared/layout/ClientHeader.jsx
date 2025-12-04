@@ -1,9 +1,9 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Search, LogOut, Menu, X, Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import LoginModal from './LoginModal'
-import SignupModal from './SignupModal'
-import logo from '../public/logosinfondo.png'
+import LoginModal from '../../features/auth/LoginModal'
+import SignupModal from '../../features/auth/SignupModal'
+import logo from '../../assets/logosinfondo.png'
 
 function ClientHeader({ searchQuery, onSearchChange }) {
   const navigate = useNavigate()

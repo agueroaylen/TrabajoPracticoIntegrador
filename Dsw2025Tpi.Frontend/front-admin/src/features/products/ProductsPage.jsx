@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import Sidebar from '../components/Sidebar'
-import AdminHeader from '../components/AdminHeader'
-import Modal from '../components/Modal'
-import AlertModal from '../components/AlertModal'
-import ConfirmModal from '../components/ConfirmModal'
+import Sidebar from '../../shared/layout/Sidebar'
+import AdminHeader from '../../shared/layout/AdminHeader'
+import Modal from '../../shared/components/Modal'
+import AlertModal from '../../shared/components/AlertModal'
+import ConfirmModal from '../../shared/components/ConfirmModal'
 import { Search, ChevronLeft, ChevronRight, Eye, Trash2, Ban, CheckCircle, Edit, Package, Hash, Tag, FileText, DollarSign, Box } from 'lucide-react'
-import { alertSuccess, alertError, alertWarning, alertInfo, showConfirm } from '../utils/modalUtils'
+import { alertSuccess, alertError, alertWarning, alertInfo, showConfirm } from '../../shared/utils/modalUtils'
 
 function Products() {
   const navigate = useNavigate()

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import Modal from './Modal'
-import logocompleto from '../public/bite+logocompleto.jpg'
+import Modal from '../../shared/components/Modal'
+import logocompleto from '../../assets/bite+logocompleto.jpg'
+import { alertError } from '../../shared/utils/modalUtils'
 
 function SignupModal({ isOpen, onClose, onSwitchToLogin, onSignupSuccess, isClientContext = false }) {
   const navigate = useNavigate()

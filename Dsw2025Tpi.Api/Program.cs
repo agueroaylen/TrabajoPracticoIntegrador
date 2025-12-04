@@ -146,7 +146,13 @@ public class Program
         }
 
         app.UseCors("AllowFrontend");
-        app.UseHttpsRedirection();
+        
+        // Solo redirigir a HTTPS en producción
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
+        
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();

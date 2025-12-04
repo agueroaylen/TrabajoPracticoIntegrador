@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import Sidebar from '../components/Sidebar'
-import AdminHeader from '../components/AdminHeader'
+import Sidebar from '../../shared/layout/Sidebar'
+import AdminHeader from '../../shared/layout/AdminHeader'
 
 function Dashboard() {
   const navigate = useNavigate()
