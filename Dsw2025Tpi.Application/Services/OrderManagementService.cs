@@ -104,7 +104,7 @@ public class OrderManagementService : IOrderManagementService
     }
 
     //Obtener todas las ordenes
-    public async Task<IEnumerable<OrderModel.OrderResponse>> GetAllOrdersAsync([FromQuery] string? Status, [FromQuery] Guid? CustomerId, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 10)
+    public async Task<OrderModel.PaginatedOrdersResponse> GetAllOrdersAsync([FromQuery] string? Status, [FromQuery] Guid? CustomerId, [FromQuery] int PageNumber = 1, [FromQuery] int PageSize = 10)
     {
         var query = _context.Orders
             .Include(o => o.OrderItems)
@@ -128,13 +128,41 @@ public class OrderManagementService : IOrderManagementService
             query = query.Where(o => o.CustomerId == CustomerId.Value);
         }
 
+        // Obtener el total de registros antes de paginar
+        // IMPORTANTE: CountAsync debe ejecutarse antes de los Include para evitar problemas de rendimiento
+        // Pero como ya tenemos los Include, necesitamos crear una query separada para el count
+        var countQuery = _context.Orders.AsQueryable();
+        
+        if (!string.IsNullOrWhiteSpace(Status))
+        {
+            if (!Enum.TryParse<OrderStatus>(Status, out var statusEnum))
+                throw new BusinessException(ErrorMessages.InvalidOrderStatus);
+            countQuery = countQuery.Where(o => o.Status == statusEnum);
+        }
+
+        if (CustomerId.HasValue)
+        {
+            countQuery = countQuery.Where(o => o.CustomerId == CustomerId.Value);
+        }
+        
+        var totalCount = await countQuery.CountAsync();
+        
+        // Log para debugging
+        Console.WriteLine($"OrderManagementService - TotalCount calculado: {totalCount}, PageNumber: {PageNumber}, PageSize: {PageSize}");
+
+        // Calcular el total de páginas
+        var totalPages = (int)Math.Ceiling(totalCount / (double)PageSize);
+        
+        Console.WriteLine($"OrderManagementService - TotalPages calculado: {totalPages}");
+
+        // Aplicar paginación
         var orders = await query
             .OrderBy(o => o.OrderDate)
             .Skip((PageNumber - 1) * PageSize)
             .Take(PageSize)
             .ToListAsync();
 
-        return orders.Select(o => new OrderModel.OrderResponse(
+        var orderResponses = orders.Select(o => new OrderModel.OrderResponse(
             o.Id,
             o.CustomerId,
             o.Customer?.Name ?? "Cliente sin nombre",
@@ -149,7 +177,18 @@ public class OrderManagementService : IOrderManagementService
                 oi.Quantity,
                 oi.SubTotal
             )).ToList()
-        ));
+        )).ToList();
+
+        // Convertir a lista para asegurar la serialización correcta
+        var ordersList = orderResponses.ToList();
+        
+        return new OrderModel.PaginatedOrdersResponse(
+            ordersList,
+            totalCount,
+            PageNumber,
+            PageSize,
+            totalPages
+        );
     }
     
     //Obtner una orden por ID

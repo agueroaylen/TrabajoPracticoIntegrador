@@ -55,11 +55,65 @@ function Dashboard() {
       }
 
       // Obtener órdenes (requiere autenticación)
+      // Usamos PageSize=1 para obtener solo el totalCount sin cargar todas las órdenes
       try {
-        const ordersResponse = await axios.get('/api/orders', { headers })
-        const ordersData = Array.isArray(ordersResponse.data) ? ordersResponse.data : []
-        setOrderCount(ordersData.length)
-        console.log('Órdenes cargadas:', ordersData.length)
+        const ordersResponse = await axios.get('/api/orders', { 
+          headers,
+          params: {
+            PageNumber: 1,
+            PageSize: 1
+          }
+        })
+        
+        const responseData = ordersResponse.data
+        
+        console.log('Dashboard - Respuesta recibida:', responseData)
+        console.log('Dashboard - Tipo:', typeof responseData, 'Es array:', Array.isArray(responseData))
+        
+        // El backend devuelve: { orders: [], totalCount: X, pageNumber: Y, pageSize: Z, totalPages: W }
+        // O puede devolver un array si hay un problema (fallback)
+        if (Array.isArray(responseData)) {
+          console.warn('⚠️ Dashboard - El backend devolvió un array. Haciendo petición adicional...')
+          
+          // Si es un array, el backend no está devolviendo el objeto paginado correctamente
+          // Intentar obtener todas las órdenes con un PageSize grande para contar
+          try {
+            const countResponse = await axios.get('/api/orders', { 
+              headers,
+              params: { PageNumber: 1, PageSize: 1000 }
+            })
+            
+            console.log('Dashboard - Respuesta de conteo:', countResponse.data)
+            console.log('Dashboard - Tipo de conteo:', typeof countResponse.data, 'Es array:', Array.isArray(countResponse.data))
+            
+            if (countResponse.data && typeof countResponse.data === 'object' && !Array.isArray(countResponse.data)) {
+              const totalCount = Number(countResponse.data.totalCount ?? countResponse.data.TotalCount ?? 0)
+              setOrderCount(totalCount)
+              console.log('Dashboard - TotalCount obtenido de objeto:', totalCount)
+            } else if (Array.isArray(countResponse.data)) {
+              // Si también es un array, usar el length del array completo
+              const totalCount = countResponse.data.length
+              setOrderCount(totalCount)
+              console.log('Dashboard - TotalCount obtenido del array completo:', totalCount)
+            } else {
+              // Fallback: usar el length del primer array (incorrecto pero mejor que nada)
+              setOrderCount(responseData.length)
+              console.warn('Dashboard - Usando array fallback (incorrecto):', responseData.length)
+            }
+          } catch (error) {
+            console.error('Error al obtener totalCount:', error)
+            setOrderCount(responseData.length)
+          }
+        } else if (responseData && typeof responseData === 'object') {
+          // Extraer totalCount del objeto (puede ser camelCase o PascalCase)
+          console.log('Dashboard - Propiedades del objeto:', Object.keys(responseData))
+          const totalCount = Number(responseData.totalCount ?? responseData.TotalCount ?? 0)
+          setOrderCount(totalCount)
+          console.log('Dashboard - TotalCount extraído del objeto:', totalCount)
+        } else {
+          console.warn('⚠️ Dashboard - Respuesta inválida para órdenes:', responseData)
+          setOrderCount(0)
+        }
       } catch (ordersError) {
         console.error('Error al cargar órdenes:', ordersError)
         if (ordersError.response?.status === 401) {

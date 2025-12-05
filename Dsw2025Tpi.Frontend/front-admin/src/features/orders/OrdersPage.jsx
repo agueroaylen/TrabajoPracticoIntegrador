@@ -10,7 +10,6 @@ import { alertSuccess, alertError, alertWarning, alertInfo } from '../../shared/
 function Orders() {
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
-  const [filteredOrders, setFilteredOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -18,6 +17,8 @@ function Orders() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const itemsPerPage = 10
 
   useEffect(() => {
@@ -45,8 +46,8 @@ function Orders() {
   }, [navigate])
 
   useEffect(() => {
-    filterOrders()
-  }, [searchQuery, statusFilter, orders])
+    fetchOrders()
+  }, [currentPage, statusFilter, navigate])
 
   const fetchOrders = async () => {
     try {
@@ -55,16 +56,81 @@ function Orders() {
         Authorization: `Bearer ${token}`
       }
 
+      // Construir parámetros de consulta
+      const params = {
+        PageNumber: currentPage,
+        PageSize: itemsPerPage
+      }
+
+      // Agregar filtro de estado si no es 'all'
+      if (statusFilter !== 'all') {
+        params.Status = statusFilter
+      }
+
       try {
-        const response = await axios.get('/api/orders', { headers })
-        const ordersData = Array.isArray(response.data) ? response.data : []
-        setOrders(ordersData)
-        setFilteredOrders(ordersData)
+        const response = await axios.get('/api/orders', { headers, params })
+        const responseData = response.data
+        
+        // El backend devuelve un objeto con: { orders: [], totalCount: X, pageNumber: Y, pageSize: Z, totalPages: W }
+        // O puede devolver directamente el array si hay un problema (fallback)
+        if (Array.isArray(responseData)) {
+          // Si es un array, el backend no está devolviendo el objeto paginado correctamente
+          // Hacer una petición con PageSize grande para obtener todas las órdenes y contar el total
+          try {
+            const countResponse = await axios.get('/api/orders', { 
+              headers, 
+              params: { 
+                PageNumber: 1, 
+                PageSize: 1000,
+                ...(statusFilter !== 'all' && { Status: statusFilter })
+              } 
+            })
+            
+            if (countResponse.data && typeof countResponse.data === 'object' && !Array.isArray(countResponse.data)) {
+              // Si la respuesta de conteo es un objeto, extraer totalCount
+              const totalCount = Number(countResponse.data.totalCount ?? countResponse.data.TotalCount ?? 0)
+              setOrders(responseData)
+              setTotalCount(totalCount)
+              setTotalPages(Math.ceil(totalCount / itemsPerPage))
+              return
+            } else if (Array.isArray(countResponse.data)) {
+              // Si también es un array, usar el length del array completo como totalCount
+              const totalCount = countResponse.data.length
+              setOrders(responseData)
+              setTotalCount(totalCount)
+              setTotalPages(Math.ceil(totalCount / itemsPerPage))
+              return
+            }
+          } catch (error) {
+            console.error('Error al obtener totalCount:', error)
+          }
+          
+          // Fallback: usar el array recibido (solo muestra las órdenes de la página actual)
+          setOrders(responseData)
+          setTotalCount(responseData.length)
+          setTotalPages(Math.ceil(responseData.length / itemsPerPage))
+          return
+        }
+        
+        // Si es un objeto, extraer los datos normalmente
+        if (responseData && typeof responseData === 'object') {
+          const ordersData = Array.isArray(responseData.orders) ? responseData.orders : []
+          const totalCount = Number(responseData.totalCount ?? responseData.TotalCount ?? 0)
+          const totalPages = Number(responseData.totalPages ?? responseData.TotalPages ?? Math.ceil(totalCount / itemsPerPage))
+          
+          setOrders(ordersData)
+          setTotalCount(totalCount)
+          setTotalPages(totalPages > 0 ? totalPages : 1)
+        } else {
+          setOrders([])
+          setTotalCount(0)
+          setTotalPages(1)
+        }
       } catch (apiError) {
         console.warn('API no disponible, usando datos mock:', apiError)
-        // Datos mock para desarrollo
         setOrders([])
-        setFilteredOrders([])
+        setTotalCount(0)
+        setTotalPages(1)
       }
     } catch (error) {
       console.error('Error al cargar órdenes:', error)
@@ -73,13 +139,15 @@ function Orders() {
         navigate('/login')
       }
       setOrders([])
-      setFilteredOrders([])
+      setTotalCount(0)
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
   }
 
-  const filterOrders = () => {
+  // Filtrar órdenes localmente por búsqueda (solo en la página actual)
+  const getFilteredOrders = () => {
     let filtered = [...orders]
 
     // Filtrar por búsqueda
@@ -87,17 +155,12 @@ function Orders() {
       filtered = filtered.filter(order =>
         order.customerId?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.status?.toLowerCase().includes(searchQuery.toLowerCase())
+        order.status?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
-    // Filtrar por estado
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter)
-    }
-
-    setFilteredOrders(filtered)
-    setCurrentPage(1) // Resetear a la primera página al filtrar
+    return filtered
   }
 
   const handleViewOrder = async (orderId) => {
@@ -234,11 +297,9 @@ function Orders() {
     }
   }
 
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentOrders = filteredOrders.slice(startIndex, endIndex)
+  // Obtener órdenes filtradas (solo búsqueda local, el filtro de estado se hace en el servidor)
+  const filteredOrders = getFilteredOrders()
+  const currentOrders = filteredOrders
 
   const getPageNumbers = () => {
     const pages = []
@@ -270,7 +331,14 @@ function Orders() {
             {/* Título */}
             <div className="mb-6 sm:mb-8 md:mb-10">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2 sm:mb-3">Órdenes</h1>
-              <p className="text-gray-600 text-base sm:text-lg md:text-xl">Gestiona las órdenes de tus clientes</p>
+              <p className="text-gray-600 text-base sm:text-lg md:text-xl">
+                Gestiona las órdenes de tus clientes
+                {!loading && totalCount > 0 && (
+                  <span className="ml-2 text-orange-600 font-semibold">
+                    ({totalCount} {totalCount === 1 ? 'orden' : 'órdenes'})
+                  </span>
+                )}
+              </p>
             </div>
 
             {/* Barra de búsqueda y filtros */}
@@ -287,7 +355,10 @@ function Orders() {
               </div>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value)
+                  setCurrentPage(1) // Resetear a la primera página al cambiar filtro
+                }}
                 className="w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 font-semibold text-base sm:text-lg"
               >
                 <option value="all">Todos los Estados</option>
@@ -341,8 +412,8 @@ function Orders() {
                   ))}
                 </div>
 
-                {/* Paginación */}
-                {totalPages > 1 && (
+                {/* Paginación - Mostrar cuando hay más de 10 órdenes (más de 1 página) */}
+                {totalCount > itemsPerPage && (
                   <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 sm:mt-8 flex-wrap">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}

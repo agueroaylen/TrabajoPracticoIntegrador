@@ -9,5 +9,12 @@ public record OrderModel
     public record UpdateStatusRequest(string NewStatus);
     public record OrderItemRequest(Guid ProductId, int Quantity);
     public record OrderItemResponse(Guid ProductId, string Name, decimal UnitPrice, int Quantity, decimal Subtotal);
+    public record PaginatedOrdersResponse(
+        List<OrderResponse> Orders,
+        int TotalCount,
+        int PageNumber,
+        int PageSize,
+        int TotalPages
+    );
 }
 

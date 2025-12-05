@@ -20,7 +20,12 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                // Asegurar que use camelCase para consistencia con el frontend
+                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            });
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddHealthChecks();
 
